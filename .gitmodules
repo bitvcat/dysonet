@@ -1,0 +1,3 @@
+[submodule "skynet"]
+	path = skynet
+	url = https://github.com/shuimu98/skynet.git
