@@ -38,11 +38,20 @@ $(CSERVICE_PATH)/package.so : 3rd/skynet_package/service_package.c
 	$(CC) $(CFLAGS) $(SHARED) -o $@ $^ -I$(SKYNET_PATH)/skynet-src
 
 $(LUALIB_PATH)/socket_proxy.lua: 3rd/skynet_package/lualib/socket_proxy.lua
+	echo "copy $^ to $@ ..."
 	cp $^ $@
 
 $(SERVICE_PATH)/socket_proxyd.lua: 3rd/skynet_package/service/socket_proxyd.lua
+	echo "copy $^ to $@ ..."
 	cp $^ $@
 
-all: $(CSERVICE_PATH) $(CSERVICE_PATH)/package.so
+LUALIB = socket_proxy.lua
+SERVICE = socket_proxyd.lua
+CSERVICE = package.so
+
+all: $(LUALIB_PATH) $(LUACLIB_PATH) $(SERVICE_PATH)  $(CSERVICE_PATH) \
+	$(foreach v,$(LUALIB),$(LUALIB_PATH)/$(v)) \
+	$(foreach v,$(SERVICE),$(SERVICE_PATH)/$(v)) \
+	$(foreach v,$(CSERVICE),$(CSERVICE_PATH)/$(v))
 
 .PHONY: all
