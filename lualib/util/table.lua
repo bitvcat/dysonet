@@ -50,7 +50,7 @@ end
 -- excludeKey 排除打印的key
 -- excludeType 排除打印的值类型
 -- noAlignLine 不打印对齐线
-table.dump = function(root, depthMax, excludeKey, excludeType, noAlignLine)
+function table.dump(root, depthMax, excludeKey, excludeType, noAlignLine)
     if type(root) ~= "table" then
         return root
     end
@@ -110,7 +110,7 @@ table.dump = function(root, depthMax, excludeKey, excludeType, noAlignLine)
 end
 
 -- table 深拷贝
-table.deepcopy = function(object)
+function table.deepcopy(object)
 	local lookup_table = nil
 	local function _copy(object)
 		if type(object) ~= "table" then
@@ -132,7 +132,7 @@ table.deepcopy = function(object)
 end
 
 -- 从表中查找符合条件的元素
-table.find = function(tbl, func)
+function table.find(tbl, func)
     local isfunc = type(func) == "function"
     for k,v in pairs(tbl) do
         if isfunc then

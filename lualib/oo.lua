@@ -10,25 +10,33 @@ function Class(name, father)
 
     local cls = _G[name]
     if not cls then
-        cls = {}
-        cls.__name = name
+        cls = {
+            __name = name,
+            __index = false,
+            New = function(tlt, ...)
+                assert(tlt == cls)
+                local o = {} -- 优化：预定义table的大小
+                setmetatable(o, cls)
+                o.__ctor(o, ...)
+                oo._objectLeak[o] = os.time()
+                return o
+            end
+        }
         cls.__index = cls
-        cls.new = function(tlt, ...)
-            assert(tlt == cls)
-            local o = {} -- 优化：预定义table的大小
-            setmetatable(o, cls)
-            o.__ctor(o, ...)
-            oo._objectLeak[o] = os.time()
-            return o
-        end
+        _G[name] = cls
+    end
 
-        if father then
-            assert(type(father) == 'string', father)
-            local fatherCls = _G[father]
+    local fatherCls = nil
+    if father then
+        assert(type(father) == 'string', father)
+
+        fatherCls = _G[father]
+        if fatherCls and getmetatable(cls) ~= fatherCls then
+            assert(rawget(fatherCls, "__index"))
             assert(type(fatherCls) == "table", father)
-            setmetatable(cls, { __index = fatherCls })
         end
     end
+    setmetatable(cls, fatherCls)
 
     assert(type(cls) == "table", name)
     return cls
