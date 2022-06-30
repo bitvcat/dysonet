@@ -45,12 +45,19 @@ $(SERVICE_PATH)/socket_proxyd.lua: 3rd/skynet_package/service/socket_proxyd.lua
 	echo "copy $^ to $@ ..."
 	cp $^ $@
 
+# lua-protobuf
+$(LUACLIB_PATH)/pb.so: 3rd/lua-protobuf/pb.c
+	echo "lua-protobuf $@ $^"
+	$(CC) $(CFLAGS) $(SHARED) -o $@ $^
+
 LUALIB = socket_proxy.lua
+LUACLIB = pb.so
 SERVICE = socket_proxyd.lua
 CSERVICE = package.so
 
 all: $(LUALIB_PATH) $(LUACLIB_PATH) $(SERVICE_PATH)  $(CSERVICE_PATH) \
 	$(foreach v,$(LUALIB),$(LUALIB_PATH)/$(v)) \
+	$(foreach v,$(LUACLIB),$(LUACLIB_PATH)/$(v)) \
 	$(foreach v,$(SERVICE),$(SERVICE_PATH)/$(v)) \
 	$(foreach v,$(CSERVICE),$(CSERVICE_PATH)/$(v))
 

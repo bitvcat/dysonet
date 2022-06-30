@@ -4,7 +4,8 @@ local skynet = require "skynet"
 local socket = require "skynet.socket"
 local socket_proxy = require "socket_proxy"
 local crypt = require "skynet.crypt"
-require("util.table")
+local protobuf = require "protobuf"
+require("util.init")
 
 local gates = {}
 local connection = {}
@@ -20,18 +21,19 @@ local function _read(fd)
 end
 
 local function _newAgent(fd, addr)
-    local publicKey = crypt.randomkey()
+    local secretKey = crypt.randomkey()
     local agent = {
         fd = fd,
         addr = addr,
-        publicKey = publicKey,
-        secretKey = crypt.dhexchange(publicKey),
+        secretKey = secretKey,
+        publicKey = crypt.dhexchange(secretKey),
         encryptKey = "",
         handshake = 0
     }
     return agent
 end
 
+local LUA = {}
 local handler = {}
 function handler.onAccept(fd, addr)
     if clientNumber > clientMax then
@@ -58,10 +60,11 @@ function handler.onConnect(fd, addr)
     skynet.error(string.format("%s connected as %d", addr, fd))
 
     -- D-H exchange
-    socket_proxy.write(fd)
+    local msg = protobuf.encode_message(nil, agent.publicKey)
+    socket_proxy.write(fd, msg)
 
     -- send to watchdog
-    --skynet.send(address, "lua", "client", "onconnect", fd, addr)
+    skynet.send(watchdog, "lua", "client", "onConnect", fd, addr)
 
     skynet.timeout(0, function()
         while true do
@@ -85,11 +88,22 @@ function handler.onMessage(fd, msg)
 
     skynet.error("recv msg: ", fd, msg)
 
-    -- 反序列化
-    -- TODO
-
-    -- send to watchdog
-    --skynet.send(address, "lua", "client", "onmessage", fd, msg)
+    if agent.handshake == 0 then
+        local _, encryptStr = protobuf.decode_message(msg)
+        local cPublicKey, cEncryptKey = table.unpack(string.split(encryptStr, "|"))
+        local sEncryptKey = crypt.dhsecret(cPublicKey, agent.secretKey)
+        if cEncryptKey == sEncryptKey then
+            agent.encryptKey = sEncryptKey
+            agent.handshake = 1
+        else
+            LUA.close(fd)
+            return
+        end
+    else
+        -- 握手成功
+        local opcode, args = protobuf.decode_message(msg)
+        skynet.send(watchdog, "lua", "client", "onMessage", fd, opcode, args)
+    end
 end
 
 function handler.onClose(fd)
@@ -102,16 +116,15 @@ function handler.onClose(fd)
     connection[fd] = nil
     socket_proxy.close(fd)
 
-    --skynet.send(address, "lua", "client", "onclose", fd)
+    skynet.send(watchdog, "lua", "client", "onclose", fd)
 end
 
 --- lua 消息处理
-local LUA = {}
 function LUA.open(conf)
-    skynet.error(table.dump(conf))
     gateIp = conf.ip or "::"
     gatePort = conf.port
     watchdog = conf.watchdog
+    protobuf.start({ pbfile = "assets/proto/all.pb" })
 
     if not conf.isSlave then
         table.insert(gates, skynet.self())
@@ -143,13 +156,13 @@ function LUA.close(fd)
     end
 end
 
-function LUA.write(fd, args)
+function LUA.write(fd, opname, args)
     if not connection[fd] then
         return
     end
 
     -- 序列化
-    local msg = encode(args)
+    local msg = protobuf.encode_message(opname, args)
     socket_proxy.write(fd, msg)
 end
 
