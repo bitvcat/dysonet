@@ -20,6 +20,11 @@ function Class(name, father)
                 o.__ctor(o, ...)
                 oo._objectLeak[o] = os.time()
                 return o
+            end,
+            Init = function(tlt, ...)
+                assert(tlt == cls)
+                local func = rawget(tlt, "__init")
+                func(tlt, ...)
             end
         }
         cls.__index = cls

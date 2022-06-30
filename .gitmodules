@@ -4,3 +4,6 @@
 [submodule "3rd/skynet_package"]
 	path = 3rd/skynet_package
 	url = https://github.com/cloudwu/skynet_package.git
+[submodule "3rd/lua-protobuf"]
+	path = 3rd/lua-protobuf
+	url = https://github.com/starwing/lua-protobuf.git
