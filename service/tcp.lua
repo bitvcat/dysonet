@@ -15,12 +15,15 @@ local watchdog
 local gateIp
 local gatePort
 local balance = 1
+local gateNode
+local gateAddr
 
 local function _newAgent(fd, addr)
     local secretKey = crypt.randomkey()
     local agent = {
         fd = fd,
         addr = addr,
+        randomCode = crypt.hexencode(crypt.randomkey()),
         secretKey = secretKey,
         publicKey = crypt.dhexchange(secretKey),
         encryptKey = "",
@@ -39,21 +42,20 @@ local socket_read = function(fd)
     return true, skynet.tostring(msg, sz)
 end
 local socket_write = socket_proxy.write
-local socket_close = function(fd, reason)
+local socket_close = function(fd)
     socket_proxy.close(fd)
 
     if connection[fd] then
         assert(clientNumber >= 0, clientNumber)
         clientNumber = clientNumber - 1
         connection[fd] = nil
-        skynet.send(watchdog, "lua", "client", "onClose", fd, reason)
     end
 end
 
 local handler = {}
 function handler.onAccept(fd, addr)
     if clientNumber > clientMax then
-        socket_close(fd, "maxclient")
+        handler.onClose(fd, "maxClient")
         return
     end
 
@@ -76,17 +78,18 @@ function handler.onConnect(fd, addr)
     skynet.error(string.format("%s connected as %d", addr, fd))
 
     -- D-H exchange
-    local msg = protobuf.encode_message(nil, agent.publicKey)
+    local hexstr = agent.randomCode .. "|" .. crypt.hexencode(agent.publicKey)
+    local msg = protobuf.encode_message(nil, hexstr)
     socket_write(fd, msg)
 
     -- send to watchdog
-    skynet.send(watchdog, "lua", "client", "onConnect", fd, addr)
+    skynet.send(watchdog, "lua", "client", "onConnect", fd, addr, gateNode, gateAddr)
 
     skynet.timeout(0, function()
         while true do
             local ok, msg = socket_read(fd)
             if not ok then
-                handler.onClose(fd)
+                handler.onClose(fd, "clientClose")
                 break
             end
 
@@ -104,25 +107,28 @@ function handler.onMessage(fd, msg)
 
     if agent.handshake == 0 then
         local _, hexstr = protobuf.decode_message(msg)
-        local cPublicKey, cEncryptKey = string.match(hexstr, "(.+)|(.+)")
-        cPublicKey, cEncryptKey = crypt.hexdecode(cPublicKey), crypt.hexdecode(cEncryptKey)
-        local sEncryptKey = crypt.dhsecret(cPublicKey, agent.secretKey)
-        if cEncryptKey == sEncryptKey then
-            agent.encryptKey = sEncryptKey
+        local randomHex, cPublicHex = string.match(hexstr, "(.+)|(.+)")
+        local randomDes, cPublicKey = crypt.hexdecode(randomHex), crypt.hexdecode(cPublicHex)
+        local encryptKey = crypt.dhsecret(cPublicKey, agent.secretKey)
+        if agent.randomCode == crypt.desdecode(encryptKey, randomDes) then
+            agent.encryptKey = encryptKey
             agent.handshake = 1
+
+            local msg = protobuf.encode_message(nil, "server done")
+            socket_write(fd, msg)
         else
-            socket_close(fd, "validation fails")
+            handler.onClose(fd, "validationFail")
             return
         end
     else
-        -- 握手成功
         local opcode, args = protobuf.decode_message(msg)
         skynet.send(watchdog, "lua", "client", "onMessage", fd, opcode, args)
     end
 end
 
-function handler.onClose(fd)
-    socket_close(fd, "client closed")
+function handler.onClose(fd, reason)
+    socket_close(fd)
+    skynet.send(watchdog, "lua", "client", "onClose", fd, reason)
 end
 
 --- lua 消息处理
@@ -131,6 +137,8 @@ function LUA.open(conf)
     gateIp = conf.ip or "::"
     gatePort = conf.port
     watchdog = conf.watchdog
+    gateNode = skynet.getenv("name")
+    gateAddr = skynet.self()
     protobuf.start({ pbfile = "assets/proto/all.pb" })
 
     if not conf.isSlave then
@@ -163,7 +171,7 @@ function LUA.close(fd)
     if not connection[fd] then
         return
     end
-    socket_close(fd, "shutdown")
+    socket_close(fd)
 end
 
 function LUA.write(fd, opname, args)
