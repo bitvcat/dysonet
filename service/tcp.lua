@@ -16,10 +16,6 @@ local gateIp
 local gatePort
 local balance = 1
 
-local function _read(fd)
-    return skynet.tostring(socket_proxy.read(fd))
-end
-
 local function _newAgent(fd, addr)
     local secretKey = crypt.randomkey()
     local agent = {
@@ -33,11 +29,31 @@ local function _newAgent(fd, addr)
     return agent
 end
 
-local LUA = {}
+-- socket
+local socket_start = socket_proxy.subscribe
+local socket_read = function(fd)
+    local ok, msg, sz = pcall(socket_proxy.read, fd)
+    if not ok then
+        return false
+    end
+    return true, skynet.tostring(msg, sz)
+end
+local socket_write = socket_proxy.write
+local socket_close = function(fd, reason)
+    socket_proxy.close(fd)
+
+    if connection[fd] then
+        assert(clientNumber >= 0, clientNumber)
+        clientNumber = clientNumber - 1
+        connection[fd] = nil
+        skynet.send(watchdog, "lua", "client", "onClose", fd, reason)
+    end
+end
+
 local handler = {}
 function handler.onAccept(fd, addr)
     if clientNumber > clientMax then
-        socket_proxy.close(fd)
+        socket_close(fd, "maxclient")
         return
     end
 
@@ -51,7 +67,7 @@ function handler.onAccept(fd, addr)
 end
 
 function handler.onConnect(fd, addr)
-    socket_proxy.subscribe(fd)
+    socket_start(fd)
 
     assert(not connection[fd])
     clientNumber = clientNumber + 1
@@ -61,14 +77,14 @@ function handler.onConnect(fd, addr)
 
     -- D-H exchange
     local msg = protobuf.encode_message(nil, agent.publicKey)
-    socket_proxy.write(fd, msg)
+    socket_write(fd, msg)
 
     -- send to watchdog
     skynet.send(watchdog, "lua", "client", "onConnect", fd, addr)
 
     skynet.timeout(0, function()
         while true do
-            local ok, msg = pcall(_read, fd)
+            local ok, msg = socket_read(fd)
             if not ok then
                 handler.onClose(fd)
                 break
@@ -86,17 +102,16 @@ function handler.onMessage(fd, msg)
         return
     end
 
-    skynet.error("recv msg: ", fd, msg)
-
     if agent.handshake == 0 then
-        local _, encryptStr = protobuf.decode_message(msg)
-        local cPublicKey, cEncryptKey = table.unpack(string.split(encryptStr, "|"))
+        local _, hexstr = protobuf.decode_message(msg)
+        local cPublicKey, cEncryptKey = string.match(hexstr, "(.+)|(.+)")
+        cPublicKey, cEncryptKey = crypt.hexdecode(cPublicKey), crypt.hexdecode(cEncryptKey)
         local sEncryptKey = crypt.dhsecret(cPublicKey, agent.secretKey)
         if cEncryptKey == sEncryptKey then
             agent.encryptKey = sEncryptKey
             agent.handshake = 1
         else
-            LUA.close(fd)
+            socket_close(fd, "validation fails")
             return
         end
     else
@@ -107,19 +122,11 @@ function handler.onMessage(fd, msg)
 end
 
 function handler.onClose(fd)
-    if not connection[fd] then
-        return
-    end
-
-    assert(clientNumber >= 0, clientNumber)
-    clientNumber = clientNumber - 1
-    connection[fd] = nil
-    socket_proxy.close(fd)
-
-    skynet.send(watchdog, "lua", "client", "onclose", fd)
+    socket_close(fd, "client closed")
 end
 
 --- lua 消息处理
+local LUA = {}
 function LUA.open(conf)
     gateIp = conf.ip or "::"
     gatePort = conf.port
@@ -129,6 +136,8 @@ function LUA.open(conf)
     if not conf.isSlave then
         table.insert(gates, skynet.self())
         local id = assert(socket.listen(gateIp, gatePort))
+        skynet.error("Start tcp gate listen at " .. gateIp .. ":" .. gatePort)
+
         socket.start(id, function(fd, addr)
             skynet.error(string.format("%s accept as %d", addr, fd))
             handler.onAccept(fd, addr)
@@ -154,6 +163,7 @@ function LUA.close(fd)
     if not connection[fd] then
         return
     end
+    socket_close(fd, "shutdown")
 end
 
 function LUA.write(fd, opname, args)
@@ -163,7 +173,7 @@ function LUA.write(fd, opname, args)
 
     -- 序列化
     local msg = protobuf.encode_message(opname, args)
-    socket_proxy.write(fd, msg)
+    socket_write(fd, msg)
 end
 
 -- 启动 tcp gate 服务，监听节点内部的 lua 消息
