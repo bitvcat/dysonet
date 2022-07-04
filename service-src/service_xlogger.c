@@ -7,6 +7,8 @@
 #include <string.h>
 #include <time.h>
 
+#define SIZETIMEFMT 250
+
 struct loghandle {
     FILE *handle;
     uint32_t date;
@@ -23,10 +25,13 @@ struct xlogger {
     uint32_t starttime;
     int close;
     char logpath[64];
+    char tmpname[64];
+    char timefmt[SIZETIMEFMT];
 };
 
 struct xlogger *xlogger_create(void) {
     struct xlogger *inst = skynet_malloc(sizeof(*inst));
+    memset(inst, 0, sizeof(*inst));
     inst->handle_cap = 4;
     inst->handle_count = 0;
 
@@ -34,7 +39,6 @@ struct xlogger *xlogger_create(void) {
     size_t handles_size = sizeof(struct loghandle) * inst->handle_cap;
     inst->handles = skynet_malloc(handles_size);
     memset(inst->handles, 0, handles_size);
-    memset(inst->logpath, 0, sizeof(inst->logpath));
     return inst;
 }
 
@@ -61,14 +65,13 @@ static int create_folder(const char *path) {
     return -1;
 }
 
-#define SIZETIMEFMT 250
-static int timestring(struct xlogger *inst, const char *fmt,
-                      char tmp[SIZETIMEFMT]) {
+static int timestring(struct xlogger *inst, const char *fmt) {
     uint64_t now = skynet_now();
     time_t ti = now / 100 + inst->starttime;
     struct tm info;
     (void)localtime_r(&ti, &info);
-    strftime(tmp, SIZETIMEFMT, fmt, &info);
+    size_t result = strftime(inst->timefmt, SIZETIMEFMT, fmt, &info);
+    inst->timefmt[result] = '\0';
     return now % 100;
 }
 
@@ -123,9 +126,8 @@ static FILE *judg_handle(struct xlogger *inst, struct loghandle *h) {
     if (h == NULL)
         return NULL;
 
-    char timefmt[SIZETIMEFMT] = {0};
-    timestring(inst, "%Y%m%d", timefmt);
-    uint32_t today = strtoul(timefmt, NULL, 10);
+    timestring(inst, "%Y%m%d");
+    uint32_t today = strtoul(inst->timefmt, NULL, 10);
     if (h->date != today) {
         // 创建新的文件， eg. ./log/debug/debug2022-07-04.log
         h->date = today;
@@ -135,8 +137,8 @@ static FILE *judg_handle(struct xlogger *inst, struct loghandle *h) {
         if (create_folder(path) != 0) {
             return NULL;
         }
-        timestring(inst, "%Y-%m-%d", timefmt);
-        sprintf(h->filename, "%s/%s%s.log", path, h->name, timefmt);
+        timestring(inst, "%Y-%m-%d");
+        sprintf(h->filename, "%s/%s%s.log", path, h->name, inst->timefmt);
         printf("filename = %s\n", h->filename);
         if (h->handle) {
             fclose(h->handle);
@@ -157,15 +159,15 @@ static int xlogger_cb(struct skynet_context *context, void *ud, int type,
     case PTYPE_TEXT:
         real_msg = strchr(msg, ' ');
         if (real_msg && real_msg != msg) {
-            char name[64] = {0};
             size_t name_len = real_msg - (const char *)msg;
-            memcpy(name, msg, name_len);
-            struct loghandle *h = grab_handle(inst, name);
+            memcpy(inst->tmpname, msg, name_len);
+            inst->tmpname[name_len] = '\0';
+            struct loghandle *h = grab_handle(inst, inst->tmpname);
             FILE *handle = judg_handle(inst, h);
             if (handle) {
-                char tmp[SIZETIMEFMT];
-                int csec = timestring(ud, "%y-%m-%d %H:%M:%S", tmp);
-                fprintf(handle, "[%s.%02d] [:%08x]", tmp, csec, source);
+                int csec = timestring(ud, "%y-%m-%d %H:%M:%S");
+                fprintf(handle, "[%s.%02d] [:%08x]", inst->timefmt, csec,
+                        source);
                 fwrite(real_msg, sz - name_len, 1, handle);
                 fprintf(handle, "\n");
                 fflush(handle);
