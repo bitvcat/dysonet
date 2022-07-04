@@ -10,12 +10,12 @@ local _indent = "    "
 
 local function _EscapeKey(key)
     if type(key) == "string" then
-        key ='\"' .. tostring(key) .. '\"'
+        key = '\"' .. tostring(key) .. '\"'
     else
         key = tostring(key)
     end
 
-    local brackets = "["..key.."]"
+    local brackets = "[" .. key .. "]"
     return key, brackets
 end
 
@@ -42,7 +42,7 @@ local function _EmptyTable(isLast)
 end
 
 local function _Concat(...)
-    return table.concat({...}, "")
+    return table.concat({ ... }, "")
 end
 
 -- 树型dump一个 table,不用担心循环引用
@@ -57,12 +57,11 @@ function table.dump(root, depthMax, excludeKey, excludeType, noAlignLine)
 
     depthMax = depthMax or 3 -- 默认三层
     local cache = { [root] = "." }
-    local depth = 0
-    local temp = {"{"}
-    local function _dump(t, space, name)
-        for k,v in pairs(t) do
+    local temp = { "{" }
+    local function _dump(t, space, name, depth)
+        for k, v in pairs(t) do
             local ok, isLast = pcall(function() return not next(t, k) end) --最后一个字段
-			isLast = ok and isLast
+            isLast = ok and isLast
             local key, keyBkt = _EscapeKey(k)
 
             if type(v) == "table" then
@@ -70,23 +69,21 @@ function table.dump(root, depthMax, excludeKey, excludeType, noAlignLine)
                     table.insert(temp, _Concat(space, keyBkt, _eqStr, _bktL, cache[v], _BktR(isLast)))
                 else
                     local new_key = name .. "." .. tostring(k)
-                    cache[v] = new_key .. " ->[".. tostring(v) .."]"
+                    cache[v] = new_key .. " ->[" .. tostring(v) .. "]"
 
                     -- table 深度判断
-                    depth = depth + 1
-                    if (depthMax > 0 and depth >= depthMax) or (excludeKey and excludeKey==k) then
+                    if (depthMax > 0 and depth >= depthMax) or (excludeKey and excludeKey == k) then
                         table.insert(temp, _Concat(space, keyBkt, _eqStr, _tbShort, _Comma(isLast)))
                     else
                         if next(v) then
                             -- 非空table
                             table.insert(temp, _Concat(space, keyBkt, _eqStr, _bktL))
-                            _dump(v, _Space(space, key, isLast, noAlignLine), new_key)
+                            _dump(v, _Space(space, key, isLast, noAlignLine), new_key, depth + 1)
                             table.insert(temp, _Concat(space, _BktR(isLast)))
                         else
                             table.insert(temp, _Concat(space, keyBkt, _eqStr, _EmptyTable(isLast)))
                         end
                     end
-                    depth = depth -1
                 end
             else
                 local vType = type(v)
@@ -103,45 +100,46 @@ function table.dump(root, depthMax, excludeKey, excludeType, noAlignLine)
 
         --return #temp>0 and table.concat(temp,"\n") or nil
     end
-    _dump(root, _indent, "")
-    table.insert(temp, "}")
 
+    _dump(root, _indent, "", 0)
+    table.insert(temp, "}")
     return table.concat(temp, "\n")
 end
 
 -- table 深拷贝
 function table.deepcopy(object)
-	local lookup_table = nil
-	local function _copy(object)
-		if type(object) ~= "table" then
-			return object
-		elseif lookup_table and lookup_table[object] then
-			return lookup_table[object]
-		end
+    local lookup_table = nil
+    local function _copy(object)
+        if type(object) ~= "table" then
+            return object
+        elseif lookup_table and lookup_table[object] then
+            return lookup_table[object]
+        end
 
-		local new_table = {}
-		--if not lookup_table then lookup_table = {} end
-		lookup_table = lookup_table or {}
-		lookup_table[object] = new_table --table的副本
-		for key, value in pairs(object) do
-			new_table[_copy(key)] = _copy(value)
-		end
-		return setmetatable(new_table, getmetatable(object))
-	end
-	return _copy(object)
+        local new_table = {}
+        --if not lookup_table then lookup_table = {} end
+        lookup_table = lookup_table or {}
+        lookup_table[object] = new_table --table的副本
+        for key, value in pairs(object) do
+            new_table[_copy(key)] = _copy(value)
+        end
+        return setmetatable(new_table, getmetatable(object))
+    end
+
+    return _copy(object)
 end
 
 -- 从表中查找符合条件的元素
 function table.find(tbl, func)
     local isfunc = type(func) == "function"
-    for k,v in pairs(tbl) do
+    for k, v in pairs(tbl) do
         if isfunc then
-            if func(k,v) then
-                return k,v
+            if func(k, v) then
+                return k, v
             end
         else
             if func == v then
-                return k,v
+                return k, v
             end
         end
     end
