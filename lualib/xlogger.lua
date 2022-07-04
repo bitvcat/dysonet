@@ -1,7 +1,6 @@
 local skynet = require "skynet"
 require "skynet.manager"
 local lutil = require "lutil"
-local crypt = require "skynet.crypt"
 
 xlogger = xlogger or {}
 function xlogger.init()
@@ -47,6 +46,4 @@ function xlogger.logf(filename, fmt, ...)
     msgtable[1] = filename
     msgtable[2] = xlogger.format(fmt, ...)
     skynet.send(addr, "text", table.concat(msgtable, " "))
-
-    skynet.error("------.>", table.dump(lutil.table_deepcopy(xlogger)))
 end

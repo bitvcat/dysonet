@@ -32,26 +32,26 @@ dysonet
 
 ### 各目录规划
 - 3rd
-    -  [lkcp](https://github.com/xiyoo0812/lkcp)
-    -  [crab 敏感词过滤](https://github.com/xjdrew/crab)
-    -  [lfs](https://github.com/keplerproject/luafilesystem)
-    -  [lua-cjson](https://github.com/mpx/lua-cjson)
-    -  [lua-profile](https://github.com/lvzixun/luaprofile)
-    -  [lua-protobuf](https://github.com/starwing/lua-protobuf)
-    -  [lua-snapshot](https://github.com/sundream/lua-snapshot)
-    -  [ltrace](https://github.com/rocaltair/ltrace)
-    -  [lua-webclient](https://github.com/dpull/lua-webclient)
-    -  [lua-websocket]()
-    -  [lua-zlib](https://github.com/brimworks/lua-zlib)
-    -  [lua-zset](https://github.com/xjdrew/lua-zset)
-    -  [skynet_package](https://github.com/cloudwu/skynet_package)
+    -  [ ] [lkcp](https://github.com/xiyoo0812/lkcp)
+    -  [ ] [crab 敏感词过滤](https://github.com/xjdrew/crab)
+    -  [ ] [lfs](https://github.com/keplerproject/luafilesystem)
+    -  [ ] [lua-cjson](https://github.com/mpx/lua-cjson)
+    -  [ ] [lua-profile](https://github.com/lvzixun/luaprofile)
+    -  [x] [lua-protobuf](https://github.com/starwing/lua-protobuf)
+    -  [ ] [lua-snapshot](https://github.com/sundream/lua-snapshot)
+    -  [ ] [ltrace](https://github.com/rocaltair/ltrace)
+    -  [ ] [lua-webclient](https://github.com/dpull/lua-webclient)
+    -  [ ] [lua-websocket]()
+    -  [ ] [lua-zlib](https://github.com/brimworks/lua-zlib)
+    -  [ ] [lua-zset](https://github.com/xjdrew/lua-zset)
+    -  [x] [skynet_package](https://github.com/cloudwu/skynet_package)
 
 - lualib
-    - lua 标准库的扩展(string、table、math)
-    - time 时间处理
-    - timer 定时器
-    - 面向对象实现
+    - [x] lua 标准库的扩展(string、table、math)
+    - [ ] time 时间处理
+    - [ ] timer 定时器
+    - [x] 面向对象实现
 
 - service
-    - gate 网关(包括 tcp、kcp、websocket、http)
-    - logger 服务
+    - [ ] gate 网关(包括 tcp、kcp、websocket、http)
+    - [x] xlogger 服务

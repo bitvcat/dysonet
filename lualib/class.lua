@@ -15,7 +15,14 @@ function Class(name, father)
             __index = false,
             New = function(tlt, ...)
                 assert(tlt == cls)
-                local o = {} -- 优化：预定义table的大小
+                local o
+                if table.new then
+                    local narr = rawget(tlt, "__ACAP") or 0
+                    local nrec = rawget(tlt, "__CAP") or 8
+                    o = table.new(narr, nrec)
+                else
+                    o = {}
+                end
                 setmetatable(o, cls)
                 o.__ctor(o, ...)
                 oo._objectLeak[o] = os.time()

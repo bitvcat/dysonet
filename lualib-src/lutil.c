@@ -72,11 +72,19 @@ static int ltable_deepcopy(lua_State *L) {
     return 1;
 }
 
+static int ltable_new(lua_State *L) {
+    int narr = luaL_optinteger(L, 1, 0);
+    int nrec = luaL_optinteger(L, 2, 8);
+    lua_createtable(L, narr, nrec);
+    return 1;
+}
+
 LUAMOD_API int luaopen_lutil(lua_State *L) {
     luaL_checkversion(L);
     luaL_Reg l[] = {
         {"elfhash", lelfhash},
         {"table_deepcopy", ltable_deepcopy},
+        {"table_new", ltable_new},
         {NULL, NULL},
     };
     luaL_newlib(L, l);

@@ -144,3 +144,13 @@ function table.find(tbl, func)
         end
     end
 end
+
+function table.new()
+    return {}
+end
+
+local ok, lutil = pcall(require, "lutil")
+if ok then
+    table.new = lutil.table_new
+    table.deepcopy = lutil.table_deepcopy
+end
