@@ -155,7 +155,7 @@ function LUA.open(conf)
         conf.isSlave = true
         local slaveNum = conf.slaveNum or 0
         for i = 1, slaveNum, 1 do
-            local slaveGate = skynet.newservice("tcp")
+            local slaveGate = skynet.newservice("gate_tcp")
             skynet.call(slaveGate, "lua", "open", conf)
             table.insert(gates, slaveGate)
         end

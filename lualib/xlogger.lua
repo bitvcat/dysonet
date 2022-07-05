@@ -49,5 +49,11 @@ function xlogger.logf(filename, fmt, ...)
 end
 
 function xlogger.print(...)
-    skynet.error("[xlogger.print]", ...)
+    local t = { ... }
+    for i, value in ipairs(t) do
+        t[i] = type(value) == "table" and table.dump(value) or value
+    end
+    local info = debug.getinfo(2)
+    local prefix = (info.source or "?") .. ":" .. info.currentline
+    skynet.error("[xlogger.print]", prefix, table.unpack(t))
 end
