@@ -1,4 +1,12 @@
--- lua oop（不能热更）
+-- lua oop
+--[[
+函数命名约定：
+- 大写字母开头为类静态方法
+    1. New  创建对象
+    2. Init 类初始化
+- 小写字母开头为类方法，由对象调用
+- 双下划线（"__"）开头的方法为对象内置方法，外部一般不调用
+]]
 
 -- oo
 oo = oo or {}
@@ -17,8 +25,8 @@ function Class(name, father)
                 assert(tlt == cls)
                 local o
                 if table.new then
-                    local narr = rawget(tlt, "__ACAP") or 0
-                    local nrec = rawget(tlt, "__CAP") or 8
+                    local narr = rawget(tlt, "__narr") or 0
+                    local nrec = rawget(tlt, "__nrec") or 8
                     o = table.new(narr, nrec)
                 else
                     o = {}
@@ -30,26 +38,33 @@ function Class(name, father)
             end,
             Init = function(tlt, ...)
                 assert(tlt == cls)
-                local func = rawget(tlt, "__init")
+                local func = rawget(tlt, "__Init")
                 func(tlt, ...)
             end
         }
         cls.__index = cls
         _G[name] = cls
-    end
 
-    local fatherCls = nil
-    if father then
-        assert(type(father) == 'string', father)
+        -- father
+        local fatherCls = nil
+        if father then
+            assert(type(father) == 'string', father)
 
-        fatherCls = _G[father]
-        if fatherCls and getmetatable(cls) ~= fatherCls then
-            assert(rawget(fatherCls, "__index"))
-            assert(type(fatherCls) == "table", father)
+            fatherCls = _G[father]
+            if fatherCls and getmetatable(cls) ~= fatherCls then
+                assert(rawget(fatherCls, "__index"))
+                assert(type(fatherCls) == "table", father)
+            end
         end
+        setmetatable(cls, fatherCls)
     end
-    setmetatable(cls, fatherCls)
+    assert(type(cls) == "table", name)
+    return cls
+end
 
+function Extend(name)
+    local cls = _G[name]
+    assert(cls, name)
     assert(type(cls) == "table", name)
     return cls
 end

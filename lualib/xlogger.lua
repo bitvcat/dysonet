@@ -47,3 +47,7 @@ function xlogger.logf(filename, fmt, ...)
     msgtable[2] = xlogger.format(fmt, ...)
     skynet.send(addr, "text", table.concat(msgtable, " "))
 end
+
+function xlogger.print(...)
+    skynet.error("[xlogger.print]", ...)
+end
