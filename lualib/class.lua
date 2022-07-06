@@ -21,29 +21,32 @@ function Class(name, father)
         cls = {
             __name = name,
             __index = false,
-            New = function(tlt, ...)
-                assert(tlt == cls)
-                local o
-                if table.new then
-                    local narr = rawget(tlt, "__narr") or 0
-                    local nrec = rawget(tlt, "__nrec") or 8
-                    o = table.new(narr, nrec)
-                else
-                    o = {}
-                end
-                setmetatable(o, cls)
-                o.__ctor(o, ...)
-                oo._objectLeak[o] = os.time()
-                return o
-            end,
-            Init = function(tlt, ...)
-                assert(tlt == cls)
-                local func = rawget(tlt, "__Init")
-                func(tlt, ...)
-            end
+            New = false,
+            Init = false
         }
-        cls.__index = cls
         _G[name] = cls
+
+        cls.__index = cls
+        cls.New = function(tlt, ...)
+            assert(tlt == cls)
+            local o
+            if table.new then
+                local narr = rawget(tlt, "__narr") or 0
+                local nrec = rawget(tlt, "__nrec") or 8
+                o = table.new(narr, nrec)
+            else
+                o = {}
+            end
+            setmetatable(o, cls)
+            o.__ctor(o, ...)
+            oo._objectLeak[o] = os.time()
+            return o
+        end
+        cls.Init = function(tlt, ...)
+            assert(tlt == cls)
+            local func = rawget(tlt, "__Init")
+            func(tlt, ...)
+        end
 
         -- father
         local fatherCls = nil
