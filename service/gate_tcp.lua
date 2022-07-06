@@ -121,8 +121,10 @@ function handler.onMessage(fd, msg)
             return
         end
     else
-        local opcode, args = protobuf.decode_message(msg)
-        skynet.send(watchdog, "lua", "client", "onMessage", fd, opcode, args)
+        local opname, args = protobuf.decode_message(msg)
+        if #opname > 0 then
+            skynet.send(watchdog, "lua", "client", "onMessage", fd, opname, args)
+        end
     end
 end
 
