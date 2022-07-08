@@ -41,6 +41,10 @@ $(CSERVICE_PATH)/package.so : 3rd/skynet_package/service_package.c
 $(CSERVICE_PATH)/xlogger.so : service-src/service_xlogger.c
 	$(CC) $(CFLAGS) $(SHARED) -o $@ $^ -I$(SKYNET_PATH)/skynet-src
 
+# slogger
+$(CSERVICE_PATH)/slogger.so : service-src/service_slogger.c
+	$(CC) $(CFLAGS) $(SHARED) -o $@ $^ -I$(SKYNET_PATH)/skynet-src
+
 $(LUALIB_PATH)/socket_proxy.lua: 3rd/skynet_package/lualib/socket_proxy.lua
 	echo "copy $^ to $@ ..."
 	cp $^ $@
@@ -61,7 +65,7 @@ $(LUACLIB_PATH)/lutil.so: lualib-src/lutil.c
 LUALIB = socket_proxy.lua
 LUACLIB = pb.so lutil.so
 SERVICE = socket_proxyd.lua
-CSERVICE = package.so xlogger.so
+CSERVICE = package.so xlogger.so slogger.so
 
 all: $(LUALIB_PATH) $(LUACLIB_PATH) $(SERVICE_PATH)  $(CSERVICE_PATH) \
 	$(foreach v,$(LUALIB),$(LUALIB_PATH)/$(v)) \

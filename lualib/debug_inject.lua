@@ -34,15 +34,10 @@ local function timeout(ti)
     return ti
 end
 local function stat(ti)
-    skynet.error("----->>inject")
     local statlist = skynet.call(".launcher", "lua", "STAT", timeout(ti))
     local memlist = skynet.call(".launcher", "lua", "MEM", timeout(ti))
-    local memkv = {}
-    for k,v in pairs(memlist) do
-        memkv[k] = v
-    end
     for k,v in pairs(statlist) do
-        v.xmem=memkv[k]
+        v.xmem=memlist[k]
     end
     return statlist
 end

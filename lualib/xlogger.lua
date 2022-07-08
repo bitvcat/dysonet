@@ -3,7 +3,7 @@ require "skynet.manager"
 local lutil = require "lutil"
 
 xlogger = xlogger or {}
-function xlogger.init()
+function xlogger.init(num)
     skynet.register_protocol {
         name = "text",
         id = skynet.PTYPE_TEXT,
@@ -14,8 +14,9 @@ function xlogger.init()
     if not xlogger.addresses then
         xlogger.msgtable = { "", "" }
         xlogger.addresses = {}
+        num = num or 4
         local logpath = skynet.getenv("logpath") or "log"
-        for i = 1, 4, 1 do
+        for i = 1, num, 1 do
             local addr = assert(skynet.launch("xlogger", logpath))
             xlogger.addresses[i] = addr
         end
