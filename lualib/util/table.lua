@@ -50,7 +50,7 @@ end
 -- excludeKey 排除打印的key
 -- excludeType 排除打印的值类型
 -- noAlignLine 不打印对齐线
-function table.dump(root, depthMax, excludeKey, excludeType, noAlignLine)
+function table.dump(root, depthMax, excludeKeys, excludeTypes, noAlignLine)
     if type(root) ~= "table" then
         return root
     end
@@ -72,7 +72,7 @@ function table.dump(root, depthMax, excludeKey, excludeType, noAlignLine)
                     cache[v] = new_key .. " ->[" .. tostring(v) .. "]"
 
                     -- table 深度判断
-                    if (depthMax > 0 and depth >= depthMax) or (excludeKey and excludeKey == k) then
+                    if (depthMax > 0 and depth >= depthMax) or (excludeKeys and excludeKeys[k]) then
                         table.insert(temp, _Concat(space, keyBkt, _eqStr, _tbShort, _Comma(isLast)))
                     else
                         if next(v) then
@@ -87,7 +87,7 @@ function table.dump(root, depthMax, excludeKey, excludeType, noAlignLine)
                 end
             else
                 local vType = type(v)
-                if not excludeType or excludeType ~= vType then
+                if not excludeTypes or not excludeTypes[vType] then
                     if vType == "string" then
                         v = '\"' .. v .. '\"'
                     else
