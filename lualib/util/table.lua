@@ -1,4 +1,4 @@
--- table 扩展
+-- table库扩展
 
 -- table.dump
 local _eqStr = " = "
@@ -143,6 +143,26 @@ function table.find(tbl, func)
             end
         end
     end
+end
+
+-- 二分查找（折半查找算法）
+-- 例子：tb={1,2,3,8} factor=3
+function table.binarySearch(tb, factor, insert)
+    local middle
+    local low = 1
+    local high = #tb
+    assert(high > 0)
+    while low <= high do
+        middle = math.ceil((high - low) / 2) + low
+        if tb[middle] == factor then
+            return middle
+        elseif tb[middle] > factor then --在左边
+            high = middle - 1
+        else --在右边
+            low = middle + 1
+        end
+    end
+    if insert then return low end --如果是插入，找一个合适的位置
 end
 
 function table.new()
