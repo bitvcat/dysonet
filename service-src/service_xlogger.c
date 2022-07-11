@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
 
 #define SIZETIMEFMT 250
@@ -53,16 +55,6 @@ void xlogger_release(struct xlogger *inst) {
     }
     skynet_free(inst->handles);
     skynet_free(inst);
-}
-
-static int create_folder(const char *path) {
-    char cmdstr[128] = {0};
-    sprintf(cmdstr, "mkdir -p %s", path);
-    int result = system(cmdstr);
-    if (result == 0) {
-        return 0;
-    }
-    return -1;
 }
 
 static int timestring(struct xlogger *inst, const char *fmt) {
@@ -134,12 +126,13 @@ static FILE *judg_handle(struct xlogger *inst, struct loghandle *h) {
 
         char path[128] = {0};
         sprintf(path, "%s/%s", inst->logpath, h->name);
-        if (create_folder(path) != 0) {
+        struct stat statbuf = {0};
+        if (stat(path, &statbuf) == -1 && mkdir(path, 0777) == -1) {
             return NULL;
         }
         timestring(inst, "%Y-%m-%d");
         sprintf(h->filename, "%s/%s%s.log", path, h->name, inst->timefmt);
-        printf("filename = %s\n", h->filename);
+        // printf("filename = %s\n", h->filename);
         if (h->handle) {
             fclose(h->handle);
         }
@@ -189,10 +182,12 @@ int xlogger_init(struct xlogger *inst, struct skynet_context *ctx,
     if (parm) {
         inst->close = 1;
         memcpy(inst->logpath, parm, strlen(parm) + 1);
-        if (create_folder(parm) == 0) {
-            skynet_callback(ctx, inst, xlogger_cb);
-            return 0;
+        struct stat statbuf = {0};
+        if (stat(parm, &statbuf) == -1 && mkdir(parm, 0777) == -1) {
+            return 1;
         }
+        skynet_callback(ctx, inst, xlogger_cb);
+        return 0;
     }
     return 1;
 }

@@ -1,11 +1,16 @@
 #include "skynet.h"
 
+#include <errno.h>
+#include <fcntl.h>
 #include <libgen.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
+#include <unistd.h>
 
 #define SIZETIMEFMT 250
 
@@ -32,13 +37,74 @@ void slogger_release(struct slogger *inst) {
     skynet_free(inst);
 }
 
-static int timestring(struct slogger *inst, char tmp[SIZETIMEFMT]) {
+static int timestring(struct slogger *inst, char tmp[SIZETIMEFMT],
+                      const char *fmt) {
     uint64_t now = skynet_now();
     time_t ti = now / 100 + inst->starttime;
     struct tm info;
     (void)localtime_r(&ti, &info);
-    strftime(tmp, SIZETIMEFMT, "%d/%m/%y %H:%M:%S", &info);
+    strftime(tmp, SIZETIMEFMT, fmt, &info);
     return now % 100;
+}
+
+static int copy_file(struct slogger *inst, const char *from) {
+    FILE *fd_to, *fd_from;
+    char buf[4096];
+    ssize_t nread;
+    int saved_errno;
+
+    // cp log/skynet.log log/skynet2022-10-10-12-12-12.log
+    fd_from = fopen(from, "rb");
+    if (fd_from == NULL)
+        return -1;
+
+    char *filenamec = strdup(from);
+    char *dirpath = dirname(filenamec); // libgen.h
+    char tmp[128] = {0};
+    timestring(inst, tmp, "%Y-%m-%d-%H-%M-%S");
+    char toname[256] = {0};
+    sprintf(toname, "%s/skynet%s.log", dirpath, tmp);
+
+    fd_to = fopen(toname, "w");
+    if (fd_to == NULL)
+        goto out_error;
+
+    while (nread = fread(buf, 1, sizeof(buf), fd_from), nread > 0) {
+        char *out_ptr = buf;
+        ssize_t nwritten;
+        do {
+            nwritten = fwrite(out_ptr, 1, nread, fd_to);
+            if (nwritten >= 0) {
+                nread -= nwritten;
+                out_ptr += nwritten;
+            } else if (errno != EINTR) {
+                goto out_error;
+            }
+        } while (nread > 0);
+    }
+
+    if (nread == 0) {
+        if (fclose(fd_to) < 0) {
+            fd_to = NULL;
+            goto out_error;
+        }
+        fclose(fd_from);
+        free(filenamec);
+
+        /* Success! */
+        return 0;
+    }
+
+out_error:
+    saved_errno = errno;
+
+    free(filenamec);
+    fclose(fd_from);
+    if (fd_to != NULL)
+        fclose(fd_to);
+
+    errno = saved_errno;
+    return -1;
 }
 
 static int slogger_cb(struct skynet_context *context, void *ud, int type,
@@ -49,12 +115,12 @@ static int slogger_cb(struct skynet_context *context, void *ud, int type,
     switch (type) {
     case PTYPE_SYSTEM:
         if (inst->filename) {
-            inst->handle = freopen(inst->filename, "a", inst->handle);
+            inst->handle = freopen(inst->filename, "w", inst->handle);
         }
         break;
     case PTYPE_TEXT:
         if (inst->filename) {
-            csec = timestring(ud, inst->timefmt);
+            csec = timestring(ud, inst->timefmt, "%d/%m/%y %H:%M:%S");
             fprintf(inst->handle, "%s.%02d ", inst->timefmt, csec);
         }
         fprintf(inst->handle, "[:%08x] ", source);
@@ -85,16 +151,17 @@ int slogger_init(struct slogger *inst, struct skynet_context *ctx,
         }
 
         char *filenamec = strdup(filename);
-        char *dirpath = dirname(filenamec);
-        char cmdstr[128] = {0};
-        sprintf(cmdstr, "mkdir -p %s", dirpath);
-        free(filenamec);
-        int result = system(cmdstr);
-        if (result != 0) {
+        char *dirpath = dirname(filenamec); // libgen.h
+        struct stat statbuf = {0};
+        if (stat(dirpath, &statbuf) == -1 && mkdir(dirpath, 0777) == -1) {
+            free(filenamec);
+            fprintf(stderr, "Can't mkdir %s\n", dirpath);
             return 1;
         }
+        free(filenamec);
 
-        inst->handle = fopen(filename, "a");
+        copy_file(inst, filename);
+        inst->handle = fopen(filename, "w");
         if (inst->handle == NULL) {
             return 1;
         }
