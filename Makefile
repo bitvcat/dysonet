@@ -62,6 +62,10 @@ $(LUACLIB_PATH)/pb.so: 3rd/lua-protobuf/pb.c
 $(LUACLIB_PATH)/lutil.so: lualib-src/lutil.c
 	$(CC) $(CFLAGS) $(SHARED) -o $@ $^
 
+# lfs
+$(LUACLIB_PATH)/lfs.so: 3rd/lfs/src/lfs.c
+	$(CC) $(CFLAGS) $(SHARED) -o $@ $^
+
 LUALIB = socket_proxy.lua
 LUACLIB = pb.so lutil.so
 SERVICE = socket_proxyd.lua

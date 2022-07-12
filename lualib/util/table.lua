@@ -89,7 +89,7 @@ function table.dump(root, depthMax, excludeKeys, excludeTypes, noAlignLine)
                 local vType = type(v)
                 if not excludeTypes or not excludeTypes[vType] then
                     if vType == "string" then
-                        v = '\"' .. v .. '\"'
+                        v = '\"' .. string.gsub(v, "\"", "\\\"") .. '\"'
                     else
                         v = tostring(v) or "nil"
                     end

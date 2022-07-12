@@ -7,3 +7,6 @@
 [submodule "3rd/lua-protobuf"]
 	path = 3rd/lua-protobuf
 	url = https://github.com/starwing/lua-protobuf.git
+[submodule "3rd/lfs"]
+	path = 3rd/lfs
+	url = https://github.com/keplerproject/luafilesystem.git

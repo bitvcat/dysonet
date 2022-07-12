@@ -37,7 +37,7 @@ function string.tohex(str, pretty)
         -- header
         local header = { "\n" .. string.rep(" ", 9) }
         for i = 1, 16, 1 do
-            header[#header + 1] = string.format("%02x", i)
+            header[#header + 1] = string.format("%02x", i - 1)
         end
         header[#header + 1] = "Decoded Text"
         lines[#lines + 1] = table.concat(header, " ")
