@@ -5,7 +5,6 @@ local socket = require "skynet.socket"
 local socket_proxy = require "socket_proxy"
 local crypt = require "skynet.crypt"
 local protobuf = require "protobuf"
-require("util.init")
 
 local gates = {}
 local connection = {}
@@ -32,7 +31,7 @@ local function _newAgent(fd, addr)
     return agent
 end
 
--- socket
+--- socket
 local socket_start = socket_proxy.subscribe
 local socket_read = function(fd)
     local ok, msg, sz = pcall(socket_proxy.read, fd)
@@ -52,6 +51,7 @@ local socket_close = function(fd)
     end
 end
 
+--- handler
 local handler = {}
 function handler.onAccept(fd, addr)
     if clientNumber > clientMax then
@@ -146,7 +146,7 @@ function LUA.open(conf)
     if not conf.isSlave then
         table.insert(gates, skynet.self())
         local id = assert(socket.listen(gateIp, gatePort))
-        skynet.error("Start tcp gate listen at " .. gateIp .. ":" .. gatePort)
+        skynet.error(string.format("Listen tcp gate at %s:%s", gateIp, gatePort))
 
         socket.start(id, function(fd, addr)
             skynet.error(string.format("%s accept as %d", addr, fd))
