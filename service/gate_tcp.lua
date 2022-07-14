@@ -121,9 +121,9 @@ function handler.onMessage(fd, msg)
             return
         end
     else
-        local opname, args = protobuf.decode_message(msg)
+        local opname, args, session = protobuf.decode_message(msg)
         if #opname > 0 then
-            skynet.send(watchdog, "lua", "client", "onMessage", fd, opname, args)
+            skynet.send(watchdog, "lua", "client", "onMessage", fd, opname, args, session)
         end
     end
 end
@@ -176,13 +176,13 @@ function LUA.close(fd)
     socket_close(fd)
 end
 
-function LUA.write(fd, opname, args)
+function LUA.write(fd, opname, args, session)
     if not connection[fd] then
         return
     end
 
     -- 序列化
-    local msg = protobuf.encode_message(opname, args)
+    local msg = protobuf.encode_message(opname, args, session)
     socket_write(fd, msg)
 end
 

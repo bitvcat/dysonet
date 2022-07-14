@@ -106,8 +106,9 @@ function table.dump(root, depthMax, excludeKeys, excludeTypes, noAlignLine)
     return table.concat(temp, "\n")
 end
 
--- table 深拷贝
-function table.deepcopy(object)
+-- table 拷贝
+-- deep = true 表示深拷贝（即元表关系也拷贝）
+function table.copy(object, deep)
     local lookup_table = nil
     local function _copy(object)
         if type(object) ~= "table" then
@@ -123,7 +124,7 @@ function table.deepcopy(object)
         for key, value in pairs(object) do
             new_table[_copy(key)] = _copy(value)
         end
-        return setmetatable(new_table, getmetatable(object))
+        return deep and setmetatable(new_table, getmetatable(object)) or new_table
     end
 
     return _copy(object)
@@ -163,6 +164,15 @@ function table.binarySearch(tb, factor, insert)
         end
     end
     if insert then return low end --如果是插入，找一个合适的位置
+end
+
+-- 逆序
+function table.reverse(t)
+    local len = #t
+    local mid = math.floor(len / 2)
+    for i = 1, mid do
+        t[i], t[len - i + 1] = t[len - i + 1], t[i]
+    end
 end
 
 function table.new()

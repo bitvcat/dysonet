@@ -38,7 +38,7 @@ function protobuf.reload()
     protobuf.loadpb()
 end
 
-function protobuf.encode_message(opname, args)
+function protobuf.encode_message(opname, args, session)
     opname = opname or ""
     assert(type(opname) == "string", opname)
     local opcode = protobuf.mapping[opname] or 0
@@ -49,6 +49,7 @@ function protobuf.encode_message(opname, args)
     local message = protobuf.message
     message.opcode = opcode
     message.args = args
+    message.session = session or 0
     return pb.encode(protobuf.messageType, message)
 end
 
@@ -56,13 +57,14 @@ function protobuf.decode_message(bytes)
     local message = pb.decode(protobuf.messageType, bytes)
     assert(message)
     local opcode = message.opcode or 0
+    local session = message.session
     if opcode == 0 then
-        return "", tostring(message.args)
+        return "", tostring(message.args), session
     else
         local opname = protobuf.mapping[opcode]
         assert(opname, opcode)
         local args = pb.decode(opname, message.args)
-        return opname, args
+        return opname, args, session
     end
 end
 
