@@ -44,7 +44,7 @@ function Class(name, father)
         end
         cls.Init = function(tlt, ...)
             assert(tlt == cls)
-            local func = rawget(tlt, "__Init")
+            local func = rawget(tlt, "__init")
             func(tlt, ...)
         end
 
