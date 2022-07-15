@@ -83,7 +83,7 @@ function handler.onConnect(fd, addr)
     socket_write(fd, msg)
 
     -- send to watchdog
-    skynet.send(watchdog, "lua", "client", "onConnect", fd, addr, gateNode, gateAddr)
+    skynet.send(watchdog, "lua", "Client", "onConnect", fd, addr, gateNode, gateAddr)
 
     skynet.timeout(0, function()
         while true do
@@ -123,14 +123,14 @@ function handler.onMessage(fd, msg)
     else
         local opname, args, session = protobuf.decode_message(msg)
         if #opname > 0 then
-            skynet.send(watchdog, "lua", "client", "onMessage", fd, opname, args, session)
+            skynet.send(watchdog, "lua", "Client", "onMessage", fd, opname, args, session)
         end
     end
 end
 
 function handler.onClose(fd, reason)
     socket_close(fd)
-    skynet.send(watchdog, "lua", "client", "onClose", fd, reason)
+    skynet.send(watchdog, "lua", "Client", "onClose", fd, reason)
 end
 
 --- lua 消息处理

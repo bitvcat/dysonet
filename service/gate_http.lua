@@ -111,25 +111,23 @@ function LUA.connect(fd, addr)
         if code ~= 200 then
             response(fd, interface.write, code)
         else
-            local tmp = {}
-            if header.host then
-                table.insert(tmp, string.format("host: %s", header.host))
+            local query
+            local path, querystr = urllib.parse(url)
+            if querystr then
+                query = urllib.parse_query(querystr)
             end
-            local path, query = urllib.parse(url)
-            table.insert(tmp, string.format("path: %s", path))
-            if query then
-                local q = urllib.parse_query(query)
-                for k, v in pairs(q) do
-                    table.insert(tmp, string.format("query: %s= %s", k, v))
-                end
-            end
-            table.insert(tmp, "-----header----")
-            for k, v in pairs(header) do
-                table.insert(tmp, string.format("%s = %s", k, v))
-            end
-            table.insert(tmp, "-----body----\n" .. body)
-            skynet.call(watchdog, "lua", "http", "onMessage", fd, addr, path, method, header, body)
-            response(fd, interface.write, code, table.concat(tmp, "\n"))
+
+            local linkobj = {
+                gateNode = gateNode,
+                gateAddr = gateAddr,
+                fd = fd,
+                addr = addr,
+                realIp = header["x-real-ip"]
+            }
+            local repcode, repbody, repheader = skynet.call(watchdog, "lua", "Http", "onMessage", linkobj, path, method
+                , query, header, body)
+            -- fd,writefunc,code, bodyfunc, header
+            response(fd, interface.write, repcode, repbody, repheader)
         end
     else
         if url == sockethelper.socket_error then

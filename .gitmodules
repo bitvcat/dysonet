@@ -10,3 +10,6 @@
 [submodule "3rd/lfs"]
 	path = 3rd/lfs
 	url = https://github.com/keplerproject/luafilesystem.git
+[submodule "3rd/lua-cjson"]
+	path = 3rd/lua-cjson
+	url = https://github.com/openresty/lua-cjson.git

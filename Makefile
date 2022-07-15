@@ -66,8 +66,13 @@ $(LUACLIB_PATH)/lutil.so: lualib-src/lutil.c
 $(LUACLIB_PATH)/lfs.so: 3rd/lfs/src/lfs.c
 	$(CC) $(CFLAGS) $(SHARED) -o $@ $^
 
+# lua-cjson
+$(LUACLIB_PATH)/cjson.so: 3rd/lua-cjson/lua_cjson.c 3rd/lua-cjson/strbuf.c 3rd/lua-cjson/fpconv.c
+	echo "lua-cjson $@ $^"
+	$(CC) $(CFLAGS) $(SHARED) -o $@ $^
+
 LUALIB = socket_proxy.lua
-LUACLIB = pb.so lutil.so
+LUACLIB = pb.so lutil.so cjson.so
 SERVICE = socket_proxyd.lua
 CSERVICE = package.so xlogger.so slogger.so
 
