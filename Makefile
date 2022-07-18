@@ -15,7 +15,7 @@ LUA_LIB ?= $(SKYNET_PATH)/3rd/lua/liblua.a
 # -g 编译产生调试信息
 # -O2 优化等级，参考：https://www.zhihu.com/question/27090458
 # -Wall 生成所有警告信息
-CFLAGS = -g -O2 -Wall -I$(LUA_INC)
+CFLAGS = -g -O2 -Wall -Wshadow -Wextra -I$(LUA_INC)
 SHARED = -fPIC --shared
 
 # 创建目标对应的文件夹
@@ -71,8 +71,27 @@ $(LUACLIB_PATH)/cjson.so: 3rd/lua-cjson/lua_cjson.c 3rd/lua-cjson/strbuf.c 3rd/l
 	echo "lua-cjson $@ $^"
 	$(CC) $(CFLAGS) $(SHARED) -o $@ $^
 
+# luasocket
+SOCKET_CS= \
+	luasocket.c \
+	timeout.c \
+	buffer.c \
+	io.c \
+	auxiliar.c \
+	compat.c \
+	options.c \
+	inet.c \
+	usocket.c \
+	except.c \
+	select.c \
+	tcp.c \
+	udp.c
+SOCKET_SRCS=$(foreach src,$(SOCKET_CS),3rd/luasocket/src/$(src))
+$(LUACLIB_PATH)/socket.so: $(SOCKET_SRCS)
+	$(CC) $(CFLAGS) $(SHARED) -o $@ $^
+
 LUALIB = socket_proxy.lua
-LUACLIB = pb.so lutil.so cjson.so
+LUACLIB = pb.so lutil.so cjson.so socket.so
 SERVICE = socket_proxyd.lua
 CSERVICE = package.so xlogger.so slogger.so
 
