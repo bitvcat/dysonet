@@ -34,8 +34,8 @@ dysonet
 - 3rd
     -  [ ] [lkcp](https://github.com/xiyoo0812/lkcp)
     -  [ ] [crab 敏感词过滤](https://github.com/xjdrew/crab)
-    -  [ ] [lfs](https://github.com/keplerproject/luafilesystem)
-    -  [ ] [lua-cjson](https://github.com/mpx/lua-cjson)
+    -  [x] [lfs](https://github.com/keplerproject/luafilesystem)
+    -  [x] [lua-cjson](https://github.com/cloudwu/lua-cjson)
     -  [ ] [lua-profile](https://github.com/lvzixun/luaprofile)
     -  [x] [lua-protobuf](https://github.com/starwing/lua-protobuf)
     -  [ ] [lua-snapshot](https://github.com/sundream/lua-snapshot)
@@ -55,3 +55,4 @@ dysonet
 - service
     - [ ] gate 网关(包括 tcp、kcp、websocket、http)
     - [x] xlogger 服务
+    - [x] slogger 扩展skynet默认的runtimer日志（支持同时写入到文件和stdout）
