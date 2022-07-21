@@ -39,18 +39,19 @@ function string.tohex(str, pretty)
         for i = 1, 16, 1 do
             header[#header + 1] = string.format("%02x", i - 1)
         end
-        header[#header + 1] = "Decoded Text"
+        header[#header + 1] = "  Decoded Text"
         lines[#lines + 1] = table.concat(header, " ")
 
         -- hex
         for i = 1, linenum, 1 do
             local startpos = (i - 1) * 16
             local hex = { string.format("%08x:", (i - 1) * 16) }
+            hex[16 + 2] = "│"
             for j = 1, 16, 1 do
                 local pos = startpos + j
                 local byte = string.byte(str, pos, pos)
                 hex[1 + j] = byte and string.format("%02x", byte) or "  "
-                hex[16 + 1 + j] = byte and string.char(byte) or " "
+                hex[16 + 2 + j] = byte and (byte>31 and byte<127 and string.char(byte) or "⊠") or " "
             end
             lines[#lines + 1] = table.concat(hex, " ")
         end
