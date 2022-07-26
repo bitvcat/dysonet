@@ -77,11 +77,6 @@ function handler.onConnect(fd, addr)
     connection[fd] = agent
     skynet.error(string.format("%s connected as %d", addr, fd))
 
-    -- D-H exchange
-    local hexstr = agent.randomCode .. "|" .. crypt.hexencode(agent.publicKey)
-    local msg = protobuf.encode_message(nil, hexstr)
-    socket_write(fd, msg)
-
     -- send to watchdog
     skynet.send(watchdog, "lua", "Client", "onConnect", fd, addr, gateNode, gateAddr)
 
@@ -106,13 +101,22 @@ function handler.onMessage(fd, msg)
     end
 
     if agent.handshake == 0 then
+        local _, hellostr = protobuf.decode_message(msg)
+        assert(hellostr == "client hello", hellostr)
+
+         -- D-H exchange
+        local hexstr = agent.randomCode .. "|" .. crypt.hexencode(agent.publicKey)
+        local msg = protobuf.encode_message(nil, hexstr)
+        socket_write(fd, msg)
+        agent.handshake = 1
+    elseif agent.handshake == 1 then
         local _, hexstr = protobuf.decode_message(msg)
         local randomHex, cPublicHex = string.match(hexstr, "(.+)|(.+)")
         local randomDes, cPublicKey = crypt.hexdecode(randomHex), crypt.hexdecode(cPublicHex)
         local encryptKey = crypt.dhsecret(cPublicKey, agent.secretKey)
         if agent.randomCode == crypt.desdecode(encryptKey, randomDes) then
             agent.encryptKey = encryptKey
-            agent.handshake = 1
+            agent.handshake = 2
 
             local msg = protobuf.encode_message(nil, "server done")
             socket_write(fd, msg)
@@ -120,11 +124,13 @@ function handler.onMessage(fd, msg)
             handler.onClose(fd, "validationFail")
             return
         end
-    else
+    elseif agent.handshake == 2 then
         local opname, args, session = protobuf.decode_message(msg)
         if #opname > 0 then
             skynet.send(watchdog, "lua", "Client", "onMessage", fd, opname, args, session)
         end
+    else
+        handler.onClose(fd, "unauthLink")
     end
 end
 

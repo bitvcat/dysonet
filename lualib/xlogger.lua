@@ -3,16 +3,32 @@ require "skynet.manager"
 local lutil = require "lutil"
 
 xlogger = xlogger or {}
-function xlogger.init(num)
+
+--level define
+xlogger.DEBUG = 1   -- 调试
+xlogger.INFO = 2    -- 信息
+xlogger.WARN = 3    -- 警告
+xlogger.ERROR = 4   -- 普通错误
+xlogger.FATAL = 5   -- 致命错误
+
+function xlogger.init(levelname, num)
+    xlogger.wraps = {
+        DEBUG = "[DEBUG]",
+        INFO = "[INFO]",
+        WARN = "[WARN]",
+        ERROR = "[ERROR]",
+        FATAL = "[FATAL]",
+    }
+    xlogger.level = xlogger[levelname] or xlogger.INFO
+
     skynet.register_protocol {
         name = "text",
         id = skynet.PTYPE_TEXT,
         pack = function(text) return text end,
         unpack = function(buf, sz) return skynet.tostring(buf, sz) end,
     }
-
     if not xlogger.addresses then
-        xlogger.msgtable = { "", "" }
+        xlogger.msgtable = { "", "", ""}
         xlogger.addresses = {}
         num = num or 4
         local logpath = skynet.getenv("logpath") or "log"
@@ -41,11 +57,16 @@ function xlogger.format(fmt, ...)
     return msg
 end
 
-function xlogger.logf(filename, fmt, ...)
+function xlogger.logf(levelname, filename, fmt, ...)
+    if xlogger[levelname] < xlogger.level then
+        return
+    end
+
     local msgtable = xlogger.msgtable
     local addr = xlogger.getAddr(filename)
     msgtable[1] = filename
-    msgtable[2] = xlogger.format(fmt, ...)
+    msgtable[2] = xlogger.wraps[levelname] or levelname
+    msgtable[3] = xlogger.format(fmt, ...)
     skynet.send(addr, "text", table.concat(msgtable, " "))
 end
 
