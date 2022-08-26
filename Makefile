@@ -88,10 +88,14 @@ SOCKET_CS= \
 	udp.c
 SOCKET_SRCS=$(foreach src,$(SOCKET_CS),3rd/luasocket/src/$(src))
 $(LUACLIB_PATH)/socket.so: $(SOCKET_SRCS)
-	$(CC) $(CFLAGS) $(SHARED) -o $@ $^
+	g++ $(CFLAGS) $(SHARED) -o $@ $^
+
+# libpdebug
+$(LUACLIB_PATH)/libpdebug.so: 3rd/libpdebug/libpdebug.cpp
+	g++ $(CFLAGS) $(SHARED) -Wno-unused-parameter -o $@ $^
 
 LUALIB = socket_proxy.lua
-LUACLIB = pb.so lutil.so cjson.so socket.so
+LUACLIB = pb.so lutil.so cjson.so socket.so libpdebug.so
 SERVICE = socket_proxyd.lua
 CSERVICE = package.so xlogger.so slogger.so
 

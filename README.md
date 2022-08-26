@@ -45,6 +45,7 @@ dysonet
     -  [ ] [lua-zlib](https://github.com/brimworks/lua-zlib)
     -  [ ] [lua-zset](https://github.com/xjdrew/lua-zset)
     -  [x] [skynet_package](https://github.com/cloudwu/skynet_package)
+    -  [x] [luasocket](https://github.com/lunarmodules/luasocket) for LuaPanda
 
 - lualib
     - [x] lua 标准库的扩展(string、table、math)
