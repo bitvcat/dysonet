@@ -2,6 +2,18 @@ local skynet = require "skynet"
 require "skynet.manager"
 local lutil = require "lutil"
 
+-- 颜色代码
+local COLOR = {
+    BLACK   = "#30",
+    RED     = "#31",
+    GREEN   = "#32",
+    YELLOW  = "#33",
+    BLUE    = "#34",
+    FUCHSIN = "#35", -- 品红
+    CYAN    = "#36", -- 青色 蓝绿色
+}
+
+-- xlogger
 xlogger = xlogger or {}
 
 --level define
@@ -78,4 +90,14 @@ function xlogger.print(...)
     local info = debug.getinfo(2)
     local prefix = (info.source or "?") .. ":" .. info.currentline
     skynet.error("[xlogger.print]", prefix, table.unpack(t))
+end
+
+function xlogger.color(colorname, ...)
+    local t = { ... }
+    for i, value in ipairs(t) do
+        t[i] = type(value) == "table" and table.dump(value) or value
+    end
+    local info = debug.getinfo(2)
+    local prefix = (info.source or "?") .. ":" .. info.currentline
+    skynet.error(COLOR[colorname] or "", "[xlogger.color]", prefix, table.unpack(t))
 end

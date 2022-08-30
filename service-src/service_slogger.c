@@ -123,15 +123,29 @@ static int slogger_cb(struct skynet_context *context, void *ud, int type,
             csec = timestring(ud, inst->timefmt, "%d/%m/%y %H:%M:%S");
             fprintf(inst->handle, "%s.%02d ", inst->timefmt, csec);
         }
+
+        // 截取颜色代码
+        int offset = 0;
+        const char *_msg = msg;
+        if (sz > 3 && _msg[0] == '#') {
+            offset = 3 + 1;
+        }
         fprintf(inst->handle, "[:%08x] ", source);
-        fwrite(msg, sz, 1, inst->handle);
+        fwrite(msg + offset, sz - offset, 1, inst->handle);
         fprintf(inst->handle, "\n");
         fflush(inst->handle);
         if (inst->both) {
+            if (offset) {
+                int color = (_msg[1] - '0') * 10 + _msg[2] - '0';
+                fprintf(stdout, "\e[%dm", color);
+            }
             fprintf(stdout, "%s.%02d ", inst->timefmt, csec);
             fprintf(stdout, "[:%08x] ", source);
-            fwrite(msg, sz, 1, stdout);
+            fwrite(msg + offset, sz - offset, 1, stdout);
             fprintf(stdout, "\n");
+            if (offset) {
+                fprintf(stdout, "\e[0m");
+            }
             fflush(stdout);
         }
         break;
