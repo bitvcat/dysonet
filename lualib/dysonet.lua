@@ -16,6 +16,10 @@ dysonet.mongo = require "skynet.db.mongo"
 dysonet.bson = require "bson"
 dysonet.cjson = require "cjson"
 
+-- dysonet 扩展模块
+dysonet.time = require "time"
+
+-- dysonet 扩展api
 function dysonet.onerror(errmsg)
 	local err = string.format('%s\n%s\n[END]', errmsg or '', debug.traceback())
     if xlogger then
