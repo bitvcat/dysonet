@@ -1,4 +1,4 @@
--- http gate service
+-- https gate service
 
 local skynet = require "skynet"
 local socket = require "skynet.socket"
@@ -7,12 +7,15 @@ local protobuf = require "protobuf"
 local urllib = require "http.url"
 local httpd = require "http.httpd"
 local sockethelper = require "http.sockethelper"
+local tls = require "http.tlshelper"
 
 local watchdog
 local gateIp
 local gatePort
 local gateNode
 local gateAddr
+local certfile
+local keyfile
 local gates = {}
 
 local balance = 1
@@ -34,24 +37,34 @@ local function response(id, write, ...)
     end
 end
 
+local function new_ssl_ctx(certfile, keyfile)
+    local SSLCTX_SERVER = tls.newctx()
+    print(certfile, keyfile)
+    SSLCTX_SERVER:set_cert(certfile, keyfile)
+    return tls.newtls("server", SSLCTX_SERVER)
+end
+
 local LUA = {}
 function LUA.open(conf)
     gateIp = conf.ip or "::"
     gatePort = conf.port
     watchdog = conf.watchdog
+    protocol = conf.protocol
     gateNode = skynet.getenv("name")
     gateAddr = skynet.self()
+    certfile = conf.certfile
+    keyfile = conf.keyfile
 
     if not conf.isSlave then
         table.insert(gates, skynet.self())
         local id = assert(socket.listen(gateIp, gatePort))
-        skynet.error(string.format("Listen http gate at %s:%s", gateIp, gatePort))
+        skynet.error(string.format("Listen https gate at %s:%s", gateIp, gatePort))
 
         -- slave gates
         conf.isSlave = true
         local slaveNum = conf.slaveNum or 0
         for i = 1, slaveNum, 1 do
-            local slaveGate = skynet.newservice("gate_http")
+            local slaveGate = skynet.newservice("gate_https")
             skynet.call(slaveGate, "lua", "open", conf)
             table.insert(gates, slaveGate)
         end
@@ -67,13 +80,19 @@ end
 function LUA.connect(fd, addr)
     socket.start(fd)
 
+    -- init tls
+    local tls_ctx = new_ssl_ctx(certfile, keyfile)
+    local init = tls.init_responsefunc(fd, tls_ctx)
+    local close = tls.closefunc(tls_ctx)
+    local read = tls.readfunc(fd, tls_ctx)
+    local write = tls.writefunc(fd, tls_ctx)
+    init()
+
     -- limit request body size to 8192 (you can pass nil to unlimit)
-    local readfunc = sockethelper.readfunc(fd)
-    local writefunc =  sockethelper.writefunc(fd)
-    local code, url, method, header, body = httpd.read_request(readfunc, 8192)
+    local code, url, method, header, body = httpd.read_request(read, 8192)
     if code then
         if code ~= 200 then
-            response(fd, writefunc, code)
+            response(fd, write, code)
         else
             local query
             local path, querystr = urllib.parse(url)
@@ -86,12 +105,12 @@ function LUA.connect(fd, addr)
                 gateAddr = gateAddr,
                 fd = fd,
                 addr = addr,
-                realIp = header["x-real-ip"] -- for nginx
+                realIp = header["x-real-ip"]
             }
             local repcode, repbody, repheader = skynet.call(watchdog, "lua", "Http", "onMessage", linkobj, path, method
                 , query, header, body)
             -- fd,writefunc,code, bodyfunc, header
-            response(fd, writefunc, repcode, repbody, repheader)
+            response(fd, write, repcode, repbody, repheader)
         end
     else
         if url == sockethelper.socket_error then
@@ -101,6 +120,7 @@ function LUA.connect(fd, addr)
         end
     end
     socket.close(fd)
+    close()
 end
 
 skynet.start(function()

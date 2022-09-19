@@ -120,8 +120,8 @@ static int slogger_cb(struct skynet_context *context, void *ud, int type,
         break;
     case PTYPE_TEXT:
         if (inst->filename) {
-            csec = timestring(ud, inst->timefmt, "%d/%m/%y %H:%M:%S");
-            fprintf(inst->handle, "%s.%02d ", inst->timefmt, csec);
+            csec = timestring(ud, inst->timefmt, "%y-%m-%d %H:%M:%S");
+            fprintf(inst->handle, "[%s.%02d] ", inst->timefmt, csec);
         }
 
         // 截取颜色代码
@@ -139,7 +139,7 @@ static int slogger_cb(struct skynet_context *context, void *ud, int type,
                 int color = (_msg[1] - '0') * 10 + _msg[2] - '0';
                 fprintf(stdout, "\e[%dm", color);
             }
-            fprintf(stdout, "%s.%02d ", inst->timefmt, csec);
+            fprintf(stdout, "[%s.%02d] ", inst->timefmt, csec);
             fprintf(stdout, "[:%08x] ", source);
             fwrite(msg + offset, sz - offset, 1, stdout);
             fprintf(stdout, "\n");

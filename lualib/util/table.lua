@@ -32,7 +32,7 @@ local function _Space(space, key, isLast, noAlignLine)
     if noAlignLine or isLast then
         indent = space .. _indent
     else
-        indent = space .. "|" .. string.rep(" ", 3)
+        indent = space .. "│" .. string.rep(" ", 3)
     end
     return indent
 end
@@ -89,7 +89,9 @@ function table.dump(root, depthMax, excludeKeys, excludeTypes, noAlignLine)
                 local vType = type(v)
                 if not excludeTypes or not excludeTypes[vType] then
                     if vType == "string" then
-                        v = '\"' .. string.gsub(v, "\"", "\\\"") .. '\"'
+                        v = string.gsub(v, "\"", "\\\"")
+                        v = string.gsub(v, "\0", "\\0")
+                        v = '\"' .. v .. '\"'
                     else
                         v = tostring(v) or "nil"
                     end

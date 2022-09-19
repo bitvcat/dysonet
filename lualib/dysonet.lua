@@ -22,8 +22,8 @@ dysonet.time = require "time"
 -- dysonet 扩展api
 function dysonet.onerror(errmsg)
 	local err = string.format('%s\n%s\n[END]', errmsg or '', debug.traceback())
-    if xlogger then
-        xlogger.logf("ERROR", "error", err)
+    if logger then
+        logger.logf("ERROR", "error", err)
     end
     return err
 end

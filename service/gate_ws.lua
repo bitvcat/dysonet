@@ -2,6 +2,7 @@
 
 local skynet = require "skynet"
 local socket = require "skynet.socket"
+local socket_proxy = require "socket_proxy"
 local crypt = require "skynet.crypt"
 local protobuf = require "protobuf"
 local urllib = require "http.url"
@@ -11,11 +12,12 @@ local sockethelper = require "http.sockethelper"
 local watchdog
 local gateIp
 local gatePort
+local balance = 1
 local gateNode
 local gateAddr
 local gates = {}
+local protocol
 
-local balance = 1
 local function accept(fd, addr)
     -- 负载均衡
     local gate = gates[balance]
@@ -34,18 +36,56 @@ local function response(id, write, ...)
     end
 end
 
+local SSLCTX_SERVER = nil
+local function gen_interface(fd)
+    if protocol == "http" then
+        return {
+            init = nil,
+            close = nil,
+            read = sockethelper.readfunc(fd),
+            write = sockethelper.writefunc(fd),
+        }
+    elseif protocol == "https" then
+        local tls = require "http.tlshelper"
+        if not SSLCTX_SERVER then
+            SSLCTX_SERVER = tls.newctx()
+            -- gen cert and key
+            -- openssl req -x509 -newkey rsa:2048 -days 3650 -nodes -keyout server-key.pem -out server-cert.pem
+            local certfile = skynet.getenv("certfile") or "./server-cert.pem"
+            local keyfile = skynet.getenv("keyfile") or "./server-key.pem"
+            print(certfile, keyfile)
+            SSLCTX_SERVER:set_cert(certfile, keyfile)
+        end
+        local tls_ctx = tls.newtls("server", SSLCTX_SERVER)
+        return {
+            init = tls.init_responsefunc(fd, tls_ctx),
+            close = tls.closefunc(tls_ctx),
+            read = tls.readfunc(fd, tls_ctx),
+            write = tls.writefunc(fd, tls_ctx),
+        }
+    else
+        error(string.format("Invalid protocol: %s", protocol))
+    end
+end
+
 local LUA = {}
 function LUA.open(conf)
     gateIp = conf.ip or "::"
     gatePort = conf.port
     watchdog = conf.watchdog
+    protocol = conf.protocol
     gateNode = skynet.getenv("name")
     gateAddr = skynet.self()
 
     if not conf.isSlave then
         table.insert(gates, skynet.self())
         local id = assert(socket.listen(gateIp, gatePort))
-        skynet.error(string.format("Listen http gate at %s:%s", gateIp, gatePort))
+        skynet.error(string.format("Listen http gate at %s:%s protocol:%s", gateIp, gatePort, protocol))
+
+        socket.start(id, function(fd, addr)
+            skynet.error(string.format("%s accept as %d", addr, fd))
+            accept(fd, addr)
+        end)
 
         -- slave gates
         conf.isSlave = true
@@ -55,25 +95,21 @@ function LUA.open(conf)
             skynet.call(slaveGate, "lua", "open", conf)
             table.insert(gates, slaveGate)
         end
-
-        socket.start(id, function(fd, addr)
-            skynet.error(string.format("%s accept as %d", addr, fd))
-            accept(fd, addr)
-        end)
     end
     skynet.retpack()
 end
 
 function LUA.connect(fd, addr)
     socket.start(fd)
-
+    local interface = gen_interface(fd)
+    if interface.init then
+        interface.init()
+    end
     -- limit request body size to 8192 (you can pass nil to unlimit)
-    local readfunc = sockethelper.readfunc(fd)
-    local writefunc =  sockethelper.writefunc(fd)
-    local code, url, method, header, body = httpd.read_request(readfunc, 8192)
+    local code, url, method, header, body = httpd.read_request(interface.read, 8192)
     if code then
         if code ~= 200 then
-            response(fd, writefunc, code)
+            response(fd, interface.write, code)
         else
             local query
             local path, querystr = urllib.parse(url)
@@ -86,12 +122,12 @@ function LUA.connect(fd, addr)
                 gateAddr = gateAddr,
                 fd = fd,
                 addr = addr,
-                realIp = header["x-real-ip"] -- for nginx
+                realIp = header["x-real-ip"]
             }
             local repcode, repbody, repheader = skynet.call(watchdog, "lua", "Http", "onMessage", linkobj, path, method
                 , query, header, body)
             -- fd,writefunc,code, bodyfunc, header
-            response(fd, writefunc, repcode, repbody, repheader)
+            response(fd, interface.write, repcode, repbody, repheader)
         end
     else
         if url == sockethelper.socket_error then
@@ -101,6 +137,9 @@ function LUA.connect(fd, addr)
         end
     end
     socket.close(fd)
+    if interface.close then
+        interface.close()
+    end
 end
 
 skynet.start(function()
