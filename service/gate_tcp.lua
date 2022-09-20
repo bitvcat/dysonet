@@ -151,13 +151,6 @@ function LUA.open(conf)
 
     if not conf.isSlave then
         table.insert(gates, skynet.self())
-        local id = assert(socket.listen(gateIp, gatePort))
-        skynet.error(string.format("Listen tcp gate at %s:%s", gateIp, gatePort))
-
-        socket.start(id, function(fd, addr)
-            skynet.error(string.format("%s accept as %d", addr, fd))
-            handler.onAccept(fd, addr)
-        end)
 
         -- slave gates
         conf.isSlave = true
@@ -167,6 +160,14 @@ function LUA.open(conf)
             skynet.call(slaveGate, "lua", "open", conf)
             table.insert(gates, slaveGate)
         end
+
+        -- listen
+        local id = assert(socket.listen(gateIp, gatePort))
+        skynet.error(string.format("Listen tcp gate at %s:%s", gateIp, gatePort))
+        socket.start(id, function(fd, addr)
+            skynet.error(string.format("%s accept as %d", addr, fd))
+            handler.onAccept(fd, addr)
+        end)
     end
     skynet.retpack()
 end
