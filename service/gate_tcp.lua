@@ -16,6 +16,7 @@ local gatePort
 local balance = 1
 local gateNode
 local gateAddr
+local protocol
 
 local function _newAgent(fd, addr)
     local secretKey = crypt.randomkey()
@@ -78,7 +79,7 @@ function handler.onConnect(fd, addr)
     skynet.error(string.format("%s connected as %d", addr, fd))
 
     -- send to watchdog
-    skynet.send(watchdog, "lua", "Client", "onConnect", fd, addr, gateNode, gateAddr)
+    skynet.send(watchdog, "lua", "Client", "onConnect", fd, addr, gateNode, gateAddr, protocol)
 
     skynet.timeout(0, function()
         while true do
@@ -147,6 +148,7 @@ function LUA.open(conf)
     watchdog = conf.watchdog
     gateNode = skynet.getenv("name")
     gateAddr = skynet.self()
+    protocol = conf.protocol
     protobuf.start({ pbfile = "assets/proto/all.pb" })
 
     if not conf.isSlave then

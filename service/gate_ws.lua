@@ -28,6 +28,7 @@ end
 local handle = {}
 function handle.connect(fd)
     print("ws connect from: " .. tostring(fd))
+    skynet.send(watchdog, "lua", "Client", "onConnect", fd, websocket.addrinfo(fd), gateNode, gateAddr, protocol)
 end
 
 function handle.handshake(fd, header, url)
@@ -44,6 +45,8 @@ function handle.message(fd, msg, msg_type)
     assert(msg_type == "binary" or msg_type == "text")
     print("ws recv message: " .. tostring(msg) .. "\n")
     websocket.write(fd, msg)
+    --local resp = string.rep("a", 65535+5)
+    --websocket.write(fd, resp)
     -- local opname, args, session = protobuf.decode_message(msg)
     -- if #opname > 0 then
     --     skynet.send(watchdog, "lua", "Client", "onMessage", fd, opname, args, session)
@@ -60,10 +63,14 @@ end
 
 function handle.close(fd, code, reason)
     print("ws close from: " .. tostring(fd), code, reason)
+    --print(debug.traceback())
+    --skynet.send(watchdog, "lua", "Client", "onClose", fd, reason)
 end
 
 function handle.error(fd)
     print("ws error from: " .. tostring(fd))
+    --websocket.close(id, code, reason)
+    --skynet.send(watchdog, "lua", "Client", "onClose", fd, "wsError")
 end
 
 local LUA = {}
