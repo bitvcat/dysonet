@@ -28,7 +28,6 @@ end
 local handle = {}
 function handle.connect(fd)
     print("ws connect from: " .. tostring(fd))
-    skynet.send(watchdog, "lua", "Client", "onConnect", fd, websocket.addrinfo(fd), gateNode, gateAddr, protocol)
 end
 
 function handle.handshake(fd, header, url)
@@ -39,6 +38,10 @@ function handle.handshake(fd, header, url)
         print(k,v)
     end
     print("--------------")
+
+    -- 应用层的握手流程， DH exchange
+    local addr = websocket.addrinfo(fd)
+    skynet.send(watchdog, "lua", "Client", "onConnect", fd, addr, gateNode, gateAddr, protocol)
 end
 
 function handle.message(fd, msg, msg_type)

@@ -89,7 +89,7 @@ function logger.print(...)
     end
     local info = debug.getinfo(2)
     local prefix = (info.source or "?") .. ":" .. info.currentline
-    skynet.error("[logger.print]", prefix, table.unpack(t))
+    skynet.error("[logger.print]", prefix, table.concat(t,"\n"))
 end
 
 function logger.color(colorname, ...)
