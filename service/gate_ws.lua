@@ -123,6 +123,12 @@ function LUA.write(fd, opname, args, session)
     end
 end
 
+function LUA.close(fd, reason)
+    -- 1000 "normal closure"
+    -- 参见：https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
+    websocket.close(fd, 1000, reason)
+end
+
 skynet.start(function()
     skynet.dispatch("lua", function(session, source, cmd, ...)
         local func = LUA[cmd]
