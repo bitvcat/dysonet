@@ -117,7 +117,7 @@ end
 
 --- @brief 带颜色的运行时日志打印，支持打印 table
 --- @param string colorname 指定颜色名称
---- @param vars ... filename 日志文件名
+--- @param vars ... 日志文件名
 function logger.color(colorname, ...)
     local t = { ... }
     for i, value in ipairs(t) do
