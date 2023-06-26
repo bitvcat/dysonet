@@ -1,8 +1,6 @@
---[[!
-    @file
-    @brief 字符串库扩展
-    @details 详细 API 接口参见 string 类。
-]]
+--! @file
+--! @brief 字符串库扩展
+--! @details 详细 API 接口参见 string 类。
 
 --- @class string
 --- @brief 扩展标准字符串库
@@ -73,6 +71,24 @@ end
 --! @param string s 要裁剪的字符串
 --! @param string cutset 裁减的字符集合
 --! @return 两边都裁剪后的字符串
+--[[!
+    @code{.lua}
+    local str = "abcdefg"
+    print(string.tohex(str, true))
+    @endcode
+
+    ###  标题1
+    - xxxx
+    - yyyy
+
+    ```lua
+    local a = 11
+    print(a)
+    ```
+    ### 标题2
+    这是一行测试文本1  
+    这是一行测试文本2
+]]
 function string.trim1(s, cutset)
     cutset = cutset or " \t\r\n"
     local pattern = string.format("^[%s]*(.-)[%s]*$", cutset, cutset)
@@ -85,6 +101,8 @@ end
 --- @return 格式化的字符串
 --- @note 无法被打印的字符显示为 ⊠
 --- @remark 示例
+--- 示例1
+--- 示例2
 ---	@code{.lua}
 ---	local str = "abcdefg"
 ---	print(string.tohex(str, true))

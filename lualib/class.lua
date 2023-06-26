@@ -13,8 +13,25 @@ oo = oo or {}
 oo._objectLeak = oo._objectLeak or {} -- table 泄露检查的弱表
 setmetatable(oo._objectLeak, { __mode = "k" })
 
+local function _extend(cls, father)
+    -- father
+    local fatherCls = nil
+    if father then
+        assert(type(father) == 'string', father)
+
+        fatherCls = _G[father]
+        if fatherCls and getmetatable(cls) ~= fatherCls then
+            assert(oo[father] == "class", father)
+            assert(rawget(fatherCls, "__index"))
+            assert(type(fatherCls) == "table", father)
+        end
+    end
+    setmetatable(cls, fatherCls)
+end
+
 function Class(name, father)
     assert(type(name) == 'string')
+    assert(oo[name] ~= "singleton", name)
 
     local cls = _G[name]
     if not cls then
@@ -22,9 +39,9 @@ function Class(name, father)
             __name = name,
             __index = false,
             New = false,
-            Init = false
         }
         _G[name] = cls
+        oo[name] = "class"
 
         cls.__index = cls
         cls.New = function(tlt, ...)
@@ -42,6 +59,29 @@ function Class(name, father)
             oo._objectLeak[o] = os.time()
             return o
         end
+
+        -- father
+        _extend(cls, father)
+    end
+    assert(type(cls) == "table", name)
+    return cls
+end
+
+function Single(name, father)
+    assert(type(name) == 'string')
+    assert(oo[name] ~= "class", name)
+
+    local cls = _G[name]
+    if not cls then
+        cls = {
+            __name = name,
+            __index = false,
+            Init = false
+        }
+        _G[name] = cls
+        oo[name] = "singleton"
+
+        cls.__index = cls
         cls.Init = function(tlt, ...)
             assert(tlt == cls)
             local func = rawget(tlt, "__init")
@@ -49,17 +89,7 @@ function Class(name, father)
         end
 
         -- father
-        local fatherCls = nil
-        if father then
-            assert(type(father) == 'string', father)
-
-            fatherCls = _G[father]
-            if fatherCls and getmetatable(cls) ~= fatherCls then
-                assert(rawget(fatherCls, "__index"))
-                assert(type(fatherCls) == "table", father)
-            end
-        end
-        setmetatable(cls, fatherCls)
+        _extend(cls, father)
     end
     assert(type(cls) == "table", name)
     return cls
